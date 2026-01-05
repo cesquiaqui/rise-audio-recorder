@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Launch Recorder</title>
+  <style>
+    body {
+      font-family: Arial;
+      text-align: center;
+      padding: 40px;
+    }
+    button {
+      font-size: 18px;
+      padding: 12px 20px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<h3>Click to Start Recording</h3>
+
+<button onclick="launch()">Launch Recorder</button>
+
+<script>
+function launch() {
+  document.body.innerHTML = `
+    <iframe
+      src="recorder.html"
+      width="100%"
+      height="380"
+      allow="microphone; autoplay"
+      style="border:none;">
+    </iframe>
+  `;
+}
+</script>
+
+</body>
+</html>
