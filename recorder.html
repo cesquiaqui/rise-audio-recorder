@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Audio Recorder</title>
+  <title>Audio Recorder (MP3)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
@@ -25,50 +25,73 @@
 </head>
 <body>
 
-  <h3>Record Your Response</h3>
+<h3>Record Your Response</h3>
 
-  <button id="startBtn">🎙 Start Recording</button>
-  <button id="stopBtn" disabled>⏹ Stop</button>
+<button id="startBtn">🎙 Start Recording</button>
+<button id="stopBtn" disabled>⏹ Stop</button>
 
-  <audio id="audioPlayback" controls></audio>
-  <br />
-  <a id="downloadLink" style="display:none;">⬇ Download Recording</a>
+<audio id="audioPlayback" controls></audio>
+<br />
+<a id="downloadLink" style="display:none;">⬇ Download MP3</a>
 
-  <script>
-    let mediaRecorder;
-    let audioChunks = [];
+<script src="https://unpkg.com/lamejs@1.2.0/lame.min.js"></script>
 
-    document.getElementById("startBtn").onclick = async () => {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder = new MediaRecorder(stream);
-      audioChunks = [];
+<script>
+let mediaRecorder;
+let audioChunks = [];
 
-      mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(audioChunks, { type: "audio/webm" });
-        const url = URL.createObjectURL(blob);
+document.getElementById("startBtn").onclick = async () => {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  mediaRecorder = new MediaRecorder(stream);
+  audioChunks = [];
 
-        const audio = document.getElementById("audioPlayback");
-        audio.src = url;
+  mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
 
-        const link = document.getElementById("downloadLink");
-        link.href = url;
-        link.download = "recording.webm";
-        link.style.display = "inline";
-        link.textContent = "⬇ Download Recording";
-      };
+  mediaRecorder.onstop = async () => {
+    const blob = new Blob(audioChunks, { type: "audio/webm" });
+    const arrayBuffer = await blob.arrayBuffer();
+    const audioCtx = new AudioContext();
+    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
 
-      mediaRecorder.start();
-      document.getElementById("startBtn").disabled = true;
-      document.getElementById("stopBtn").disabled = false;
-    };
+    const mp3Data = [];
+    const mp3Encoder = new lamejs.Mp3Encoder(1, audioBuffer.sampleRate, 128);
+    const samples = audioBuffer.getChannelData(0);
 
-    document.getElementById("stopBtn").onclick = () => {
-      mediaRecorder.stop();
-      document.getElementById("startBtn").disabled = false;
-      document.getElementById("stopBtn").disabled = true;
-    };
-  </script>
+    const sampleBlockSize = 1152;
+    for (let i = 0; i < samples.length; i += sampleBlockSize) {
+      const sampleChunk = samples.subarray(i, i + sampleBlockSize);
+      const mp3buf = mp3Encoder.encodeBuffer(
+        sampleChunk.map(s => s * 32767)
+      );
+      if (mp3buf.length > 0) mp3Data.push(mp3buf);
+    }
+
+    const end = mp3Encoder.flush();
+    if (end.length > 0) mp3Data.push(end);
+
+    const mp3Blob = new Blob(mp3Data, { type: "audio/mp3" });
+    const url = URL.createObjectURL(mp3Blob);
+
+    document.getElementById("audioPlayback").src = url;
+
+    const link = document.getElementById("downloadLink");
+    link.href = url;
+    link.download = "recording.mp3";
+    link.style.display = "inline";
+    link.textContent = "⬇ Download MP3";
+  };
+
+  mediaRecorder.start();
+  document.getElementById("startBtn").disabled = true;
+  document.getElementById("stopBtn").disabled = false;
+};
+
+document.getElementById("stopBtn").onclick = () => {
+  mediaRecorder.stop();
+  document.getElementById("startBtn").disabled = false;
+  document.getElementById("stopBtn").disabled = true;
+};
+</script>
 
 </body>
 </html>
